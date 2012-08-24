@@ -1,0 +1,82 @@
+<?php
+
+	/**
+	 * ProcessWire 'LessPhpBridge' demonstration module
+	 * 
+	 * http://www.persommer.com
+	 *
+	 */
+
+	class LessPhp extends WireData implements Module
+	{
+
+		/**
+		 * getModuleInfo is a module required by all modules to tell ProcessWire about them
+		 *
+		 * @return array
+		 *
+		 */
+		public static function getModuleInfo()
+		{
+
+			return array(
+				'title'    => 'Less Php Bridge',
+				'version'  => 100,
+				'summary'  => 'Compiles less files to css. Includes caching.',
+				'href'     => 'http://www.persommer.com',
+				'singular' => true,
+				'autoload' => true,
+			);
+		}
+
+		public function init()
+		{
+
+			$this->addHook('Page::lessphp', $this, 'compile');
+		}
+
+		public function compile($event)
+		{
+
+			$filepathRaw = $event->arguments[0];
+			$filepathCompiled = $event->arguments[1];
+
+			if(file_exists($filepathRaw))
+			{
+				$fileTimeRaw = filemtime($filepathRaw);
+				$fileTimeComiled = 0;
+
+				if(file_exists($filepathCompiled))
+				{
+					$fileTimeComiled = filemtime($filepathCompiled);
+				}
+				else
+				{
+					$lessfile = fopen($filepathCompiled, "w");
+					fclose($lessfile);
+				}
+
+				if($fileTimeRaw > $fileTimeComiled)
+				{
+					$modulepath = pathinfo(__FILE__);
+					$modulepath = $modulepath['dirname'];
+					$lessphppath = $modulepath . '/lessphp/lessc.inc.php';
+
+					require $lessphppath;
+					$lc = new lessc();
+
+					$css = file_get_contents($filepathRaw);
+
+					$css = $lc->parse($css);
+					file_put_contents($filepathCompiled, $css);
+				}
+			}
+		}
+
+		private function sanitizePath($str)
+		{
+			$str = str_replace(" ", "\ ", $str);
+			return $str;
+		}
+
+	}
